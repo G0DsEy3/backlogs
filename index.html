@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Payment Form</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; }
+        input, select, button { width: 100%; padding: 8px; margin-top: 5px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Student Payment Form</h2>
+        <div class="form-group">
+            <label>Name:</label>
+            <input type="text" id="name">
+        </div>
+        <div class="form-group">
+            <label>Roll No:</label>
+            <input type="text" id="rollNo">
+        </div>
+        <div class="form-group">
+            <label>Current Sem:</label>
+            <input type="text" id="currentSem">
+        </div>
+        <div class="form-group">
+            <label>Category:</label>
+            <select id="category" onchange="toggleFields()">
+                <option value="">Select</option>
+                <option value="backlog">Backlog</option>
+                <option value="attendance">Attendance</option>
+            </select>
+        </div>
+        
+        <div id="backlog-section" class="hidden">
+            <h3>Backlog Subjects</h3>
+            <div id="backlog-fields"></div>
+            <button onclick="addBacklogField()">Add Subject</button>
+        </div>
+        
+        <div id="attendance-section" class="hidden">
+            <h3>Attendance Subjects</h3>
+            <div id="attendance-fields"></div>
+            <button onclick="addAttendanceField()">Add Subject</button>
+        </div>
+        
+        <h3>Total Price: ₹<span id="totalPrice">0</span></h3>
+        <button onclick="payNow()">Pay Now</button>
+    </div>
+    
+    <script>
+        let totalPrice = 0;
+        const gradePrices = { "A+": 5500, "A": 5000, "B+": 4000, "B": 3500, "C": 3000, "D": 2000 };
+        
+        function toggleFields() {
+            document.getElementById("backlog-section").classList.add("hidden");
+            document.getElementById("attendance-section").classList.add("hidden");
+            if (document.getElementById("category").value === "backlog") {
+                document.getElementById("backlog-section").classList.remove("hidden");
+            } else if (document.getElementById("category").value === "attendance") {
+                document.getElementById("attendance-section").classList.remove("hidden");
+            }
+            totalPrice = 0;
+            updatePrice();
+        }
+        
+        function addBacklogField() {
+            const div = document.createElement("div");
+            div.classList.add("form-group");
+            div.innerHTML = `
+                <input type="text" placeholder="Subject">
+                <input type="text" placeholder="Subject Code">
+                <input type="text" placeholder="Subject Sem">
+                <input type="text" placeholder="Current Grade">
+                <select onchange="updatePrice()">
+                    <option value="A+">A+</option>
+                    <option value="A">A</option>
+                    <option value="B+">B+</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                </select>
+            `;
+            document.getElementById("backlog-fields").appendChild(div);
+        }
+        
+        function addAttendanceField() {
+            const div = document.createElement("div");
+            div.classList.add("form-group");
+            div.innerHTML = `
+                <input type="text" placeholder="Subject">
+                <input type="text" placeholder="Subject Code">
+                <input type="text" placeholder="Subject Sem">
+                <input type="number" placeholder="Current Attendance">
+                <input type="number" placeholder="Expected Attendance" onchange="updatePrice()">
+            `;
+            document.getElementById("attendance-fields").appendChild(div);
+        }
+        
+        function updatePrice() {
+            totalPrice = 0;
+            document.querySelectorAll("#backlog-fields select").forEach(select => {
+                totalPrice += gradePrices[select.value];
+            });
+            document.querySelectorAll("#attendance-fields input:nth-child(5)").forEach(input => {
+                let expectedAttendance = parseInt(input.value) || 0;
+                if (expectedAttendance >= 75) totalPrice += 2500;
+                else if (expectedAttendance >= 70) totalPrice += 1500;
+            });
+            document.getElementById("totalPrice").innerText = totalPrice;
+        }
+        
+        function payNow() {
+            let options = {
+                "key": "YOUR_RAZORPAY_KEY", 
+                "amount": totalPrice * 100, 
+                "currency": "INR",
+                "name": "Student Payment",
+                "description": "Fee Payment",
+                "handler": function (response) {
+                    alert("Payment Successful: " + response.razorpay_payment_id);
+                },
+                "theme": { "color": "#3399cc" }
+            };
+            let rzp = new Razorpay(options);
+            rzp.open();
+        }
+    </script>
+</body>
+</html>
